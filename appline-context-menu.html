@@ -44,9 +44,10 @@ Custom property | Description | Default
   <style>
     .context-menu {
       display: none;
-      position: absolute;
+      position: fixed;
       z-index: 10;
-      padding: 12px;
+      padding: 2px 0;
+      min-width: 150px;
       background-color: var(--context-background-color, #fff);
       -moz-box-shadow:0 2px 5px 0 rgba(0,0,0,.4);
       box-shadow:0 2px 5px 0 rgba(0,0,0,.4);
@@ -56,46 +57,25 @@ Custom property | Description | Default
       display: block;
     }
 
-    ::slotted(li), ::slotted(paper-item) {
+    ::slotted(paper-item) {
       display: block;
       color: var(--context-text-color, #333);
-      padding: 2px;
+      padding: 5px 5px 5px 15px;
+      cursor: default;
     }
+
+    ::slotted(paper-item:hover) {
+      background-color: #ebebeb;
+    }    
 
     ::slotted(paper-item) {
-      cursor: pointer;
-    }
-
-    ::slotted(li:last-child) {
-      margin-bottom: 0;
-    }
-
-    ::slotted(a) {
-      display: block;
-      color: var(--context-link-text-color, #0066aa);
-      padding: 4px 12px;
-      text-decoration: none;
-    }
-
-    ::slotted(a:hover) {
-      background-color: var(--context-link-text-color, #0066aa);
-      color: var(--context-background-color, #fff);
-    }
-
-    ::slotted(hr) {
-      border-color: var(--context-horizontal-rule-color, #bcbcbc);
-    }
-
-    ::slotted(.paper-menu-0) {
-      background-color: var(--context-background-color, #fff);
-    }                                    
+      --paper-item-selected-weight: normal;
+      --paper-item-min-height: 0;
+    }     
   </style>
     <paper-listbox id="context-menu" class="context-menu">
       <slot></slot>
     </paper-listbox>
-    <!--<paper-menu id="context-menu" class="context-menu">
-      <content></content>
-    </paper-menu>-->
   </template>
 </dom-module>
 <script>
@@ -132,6 +112,7 @@ Custom property | Description | Default
           value: false,
           notify: true
         },
+        target: Object,
       }
     }
     /**
@@ -168,13 +149,10 @@ Custom property | Description | Default
       *
       */
       _clickInsideElement(e,t) {
-        var n = e.srcElement || e.target;
-        if(n.classList.contains(t)) {
-          return n;
-        }
-        for(;n=n.parentNode;) {
-          if(n.classList&&n.classList.contains(t)) {
-            return n;
+        for(var n=0;n<e.path.length;n++) {
+          if(e.path[n].classList&&e.path[n].classList.contains(t)) {
+            this.set("target", e.path[n])
+            return true;
           }
         }
         return false
@@ -250,6 +228,8 @@ Custom property | Description | Default
       *
       */
       _getPosition(e){
+        return {x: e.clientX, y: e.clientY}
+        return {x: e.screenX, y: e.screenY}
         var t, n;
         if (e.pageX || e.pageY) {
           t=e.pageX;

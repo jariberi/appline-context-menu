@@ -1,0 +1,312 @@
+<link rel="import" href="../polymer/polymer.html">
+
+<!--
+  Polymer element to replace right click functionality.
+
+  ### Examples
+  You can do anything you would expect to be able to do within paper-menu. See the documentation for that element here: <a href="https://elements.polymer-project.org/elements/paper-menu">Paper-menu</a>.
+  The only real difference is that appline-context-menu tags are used as the initial paper-menu tags.
+
+      <appline-context-menu parentclass="standardExample">
+        <paper-item>
+          <a href="#">Normal Item</a>
+        </paper-item>
+      </appline-context-menu>
+      
+  You may need to use actual paper-menu tags further down the chain if they are required, like when using submenus for instance.
+
+      <appline-context-menu parentclass="submenuExample">
+        <paper-submenu opened>
+          <paper-item class="menu-trigger">Submenu Head</paper-item>
+          <paper-menu class="menu-content">
+            <paper-item><a href='#'>Submenu Item</a></paper-item>
+          </paper-menu>
+        </paper-submenu>
+      </appline-context-menu>
+  
+  ### Styling
+    
+The following custom properties are available for styling:
+
+Custom property | Description | Default
+----------------|-------------|----------
+`--context-background-color` | Background color of the menu. | `#fff`
+`--context-text-color` | Text color within the menu. | `#333`
+`--context-link-text-color` | Text color and on hover background color for links<br>For text within 'A' tags. | `#0066aa`
+`--context-horizontal-rule-color` | Color of 'HR' tags. | `#bcbcbc`
+
+  @element appline-context-menu
+  @demo demo/index.html
+-->
+
+<dom-module id="appline-context-menu">
+  <template>
+  <style>
+    .context-menu {
+      display: none;
+      position: absolute;
+      z-index: 10;
+      padding: 12px;
+      background-color: var(--context-background-color, #fff);
+      -moz-box-shadow:0 2px 5px 0 rgba(0,0,0,.4);
+      box-shadow:0 2px 5px 0 rgba(0,0,0,.4);
+    }
+
+    .context-menu--active {
+      display: block;
+    }
+
+    ::slotted(li), ::slotted(paper-item) {
+      display: block;
+      color: var(--context-text-color, #333);
+      padding: 2px;
+    }
+
+    ::slotted(paper-item) {
+      cursor: pointer;
+    }
+
+    ::slotted(li:last-child) {
+      margin-bottom: 0;
+    }
+
+    ::slotted(a) {
+      display: block;
+      color: var(--context-link-text-color, #0066aa);
+      padding: 4px 12px;
+      text-decoration: none;
+    }
+
+    ::slotted(a:hover) {
+      background-color: var(--context-link-text-color, #0066aa);
+      color: var(--context-background-color, #fff);
+    }
+
+    ::slotted(hr) {
+      border-color: var(--context-horizontal-rule-color, #bcbcbc);
+    }
+
+    ::slotted(.paper-menu-0) {
+      background-color: var(--context-background-color, #fff);
+    }                                    
+  </style>
+    <paper-listbox id="context-menu" class="context-menu">
+      <slot></slot>
+    </paper-listbox>
+    <!--<paper-menu id="context-menu" class="context-menu">
+      <content></content>
+    </paper-menu>-->
+  </template>
+</dom-module>
+<script>
+  class ApplineContextMenu extends Polymer.Element {
+    static get is() {
+      return 'appline-context-menu';
+    }
+
+    static get properties() {
+      return {
+        /**
+        * Sting for storing class name
+        * of which classes should be listened too
+        *
+        * @attribute parentclass
+        * @type String
+        * @default "default"
+        */
+        parentclass: {
+        type: String,
+        value: 'contextmenu-trigger',
+        notify: true
+        },
+        /** 
+        * Boolean for storing value
+        * for menu state
+        *
+        * @attribute opened
+        * @type Boolean
+        * @default "false"
+        */
+        opened: {
+          type: Boolean,
+          value: false,
+          notify: true
+        },
+      }
+    }
+    /**
+      * Method to show the menu
+      * updates class and vibrates on phones
+      *
+      */
+      _toggleMenuOn() {
+        if (!this.opened) {
+          this.set("opened", true);
+          Polymer.dom(this.root).querySelector("#context-menu").classList.add('context-menu--active');    
+          // Error catcher for IE and Edge
+          if (typeof navigator.vibrate === "function") { 
+            navigator.vibrate([25])
+          }
+        }
+      }
+
+      /**
+      * Method to hide the menu
+      * updates class
+      *
+      */
+      _toggleMenuOff(){
+        if (this.opened) {
+          this.set("opened", false);
+          Polymer.dom(this.root).querySelector("#context-menu").classList.remove('context-menu--active'); 
+        }
+      }
+
+      /**
+      * Method to work out to place
+      * click event and return boolean
+      *
+      */
+      _clickInsideElement(e,t) {
+        var n = e.srcElement || e.target;
+        if(n.classList.contains(t)) {
+          return n;
+        }
+        for(;n=n.parentNode;) {
+          if(n.classList&&n.classList.contains(t)) {
+            return n;
+          }
+        }
+        return false
+      }
+
+      /**
+      * Method to listen for clicks
+      * and pass data on to _clickInsideElement
+      * hides menu if click is not allowed
+      *
+      */
+      _clickListener(){
+        document.addEventListener("click",e => {
+          const t=this._clickInsideElement(e, 'menu-trigger');
+          if(!t) {
+            var n = e.which || e.button;
+            if (n) {
+              this._toggleMenuOff();
+            }
+          }
+        })
+      }
+
+      /**
+      * Method to listen for context menu
+      * and pass data on to _clickInsideElement
+      * shows menu is click is in parentclass
+      *
+      */
+      _contextListener() {
+        var taskItemInContext;
+        document.addEventListener("contextmenu", e => {
+          console.log("context click")
+          taskItemInContext=this._clickInsideElement(e, this.parentclass);
+          if (taskItemInContext) {
+            e.preventDefault();
+            this._toggleMenuOn();
+            this._positionMenu(e);
+          } else {
+            taskItemInContext=null;
+            this._toggleMenuOff();
+          }
+        })
+      }
+
+      /**
+      * Method to listen for keyup
+      * hides menu is ESC is pressed
+      *
+      */
+      _keyupListener(){
+        window.onkeyup = e => {
+          if (e.keyCode===27) {
+            this._toggleMenuOff()
+          }
+        }
+      }
+
+      /**
+      * Method to listen for page resize
+      * hides menu when actioned
+      *
+      */
+      _resizeListener(){
+        window.onresize= () => {
+          this._toggleMenuOff()
+        }
+      }
+
+      /**
+      * Method to get mouse position
+      * and return x and y values
+      *
+      */
+      _getPosition(e){
+        var t, n;
+        if (e.pageX || e.pageY) {
+          t=e.pageX;
+          n=e.pageY;
+        } else if (e.clientX||e.clientY) {
+          t=e.clientX+document.body.scrollLeft+document.documentElement.scrollLeft;
+          n=e.clientY+document.body.scrollTop+document.documentElement.scrollTop;
+        } else {
+          t: 0;
+          n = 0;
+          console.warn("Error when try to obtain the position of event")
+        }
+        return {x:t,y:n}
+      }
+
+      /**
+      * Method to start all listeners
+      * called when the dom is ready
+      *
+      */
+      _listenerInit() {
+        this._contextListener();
+        this._clickListener();
+        this._keyupListener();
+        this._resizeListener();
+      }
+
+      /**
+      * Method to move the menu
+      * passes information to _getPosition
+      * to get x and y cords, then restyles
+      *
+      */
+      _positionMenu(e){
+        const clickCoords = this._getPosition(e);
+        var menuSelector = Polymer.dom(this.root).querySelector("#context-menu");
+        const menuWidth = menuSelector.offsetWidth + 4;
+        const menuHeight = menuSelector.offsetHeight + 4;
+        const windowWidth = window.innerWidth + (clickCoords.x - e.clientX);
+        const windowHeight = window.innerHeight + (clickCoords.y - e.clientY);
+        const menuCoordsX = menuWidth > windowWidth-clickCoords.x ? clickCoords.x-menuWidth+"px" : clickCoords.x+"px";
+        const menuCoordsY = menuHeight > windowHeight-clickCoords.y ? clickCoords.y-menuHeight+"px" : clickCoords.y+"px";
+        menuSelector.style.left = menuCoordsX;
+        menuSelector.style.top = menuCoordsY;
+      }
+
+      /**
+      * Method the scripts
+      * domReady for when the dom is... rea
+      *
+      */
+      ready() {
+        super.ready();
+        this._listenerInit();
+      }
+  }
+
+  customElements.define(ApplineContextMenu.is, ApplineContextMenu)
+
+</script>

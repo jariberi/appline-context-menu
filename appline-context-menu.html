@@ -185,7 +185,6 @@ Custom property | Description | Default
       _contextListener() {
         var taskItemInContext;
         document.addEventListener("contextmenu", e => {
-          console.log("context click")
           taskItemInContext=this._clickInsideElement(e, this.parentclass);
           if (taskItemInContext) {
             e.preventDefault();
